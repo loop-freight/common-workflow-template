@@ -31,8 +31,7 @@ jobs:
       - name: Extract image name from docker-compose.yml
         id: extract-image-name
         run: |
-          IMAGE_NAME=$(yq e '.services[0].image | split(":")[0]' docker-compose.yml)
-          echo "Extracted IMAGE_NAME: $IMAGE_NAME"
+          export IMAGE_NAME=$(grep 'image:' docker-compose.yml | head -n 1 | awk '{print $2}' | sed 's/:.*//')
           echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Sanitize branch name
