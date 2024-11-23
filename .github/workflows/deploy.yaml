@@ -37,13 +37,16 @@ jobs:
       #     docker compose build
       #     docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
+      - name: DO_ACCESS_TOKEN
+        run: echo -- ${{ secrets.DO_ACCESS_TOKEN }}
+
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
-          token: dop_v1_0ab875e23534cebdf0c0608194cbd7e5da7bfb86826bb4faa565374a7da07187
+          token: ${{ secrets.DO_ACCESS_TOKEN }}
 
-      - name: Log in to DigitalOcean with specified context
-        run: doctl auth init --context doctl-token
+      # - name: Log in to DigitalOcean with specified context
+      #   run: doctl auth init --context doctl-token
 
       - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
