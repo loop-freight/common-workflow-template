@@ -43,7 +43,7 @@ jobs:
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
-          token: dop_v1_ccf7d75326bd0597f60ad5ab3451fee832e92d45a5383062b3268c0fe6634379
+          token: dop_v1_75d8df1e7984fc0770bf069f2eb7f2f7bed7af4dcd93a601f97c93aa46433198
 
       - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
