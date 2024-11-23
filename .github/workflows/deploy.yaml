@@ -60,5 +60,4 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl -n ${{ env.sanitized_branch }} get deployment/${{ env.image_name }} && \
           kubectl -n ${{ env.sanitized_branch }} rollout restart deployment/${{ env.image_name }}
