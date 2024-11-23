@@ -7,7 +7,6 @@ on:
         description: 'The branch to deploy'
         required: false
         type: string
-
 jobs:
   build:
     name: Build, push, and deploy
@@ -21,12 +20,6 @@ jobs:
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
-
-      - name: Install yq for YAML processing
-        run: |
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /tmp/yq
-          chmod +x /tmp/yq
-          echo "PATH=/tmp:$PATH" >> $GITHUB_ENV
 
       - name: Extract image name from docker-compose.yml
         id: extract-image-name
@@ -48,6 +41,7 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_ACCESS_TOKEN }}
+          context: doctl-token
 
       - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
