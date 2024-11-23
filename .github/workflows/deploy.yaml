@@ -40,7 +40,7 @@ jobs:
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
-          token: dop_v1_e298088b539dd3e4832232a202185a476a0cc4f0d03ab0239b574973ddd90121
+          token: dop_v1_0ab875e23534cebdf0c0608194cbd7e5da7bfb86826bb4faa565374a7da07187
 
       - name: Log in to DigitalOcean with specified context
         run: doctl auth init --context doctl-token
