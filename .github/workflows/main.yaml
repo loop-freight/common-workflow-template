@@ -17,34 +17,44 @@ jobs:
 
       - name: Install Docker Compose
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-      
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Install yq for YAML processing
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          chmod +x /usr/bin/yq
+
       - name: Extract image name from docker-compose.yml
         id: extract-image-name
         run: |
-          export IMAGE_NAME=$(grep 'image:' docker-compose.yml | head -n 1 | awk '{print $2}' | sed 's/:.*//')
+          IMAGE_NAME=$(yq e '.services[0].image | split(":")[0]' docker-compose.yml)
           echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Sanitize branch name
+        id: sanitize-branch
+        run: echo "sanitized_branch=$(echo ${{ github.ref_name }} | tr '/' '-')" >> $GITHUB_ENV
 
       - name: Build container image
         run: |
           docker compose build
-          docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ github.ref_name }}
+          docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
-          token: dop_v1_02ead62742e79165dbafc2900dbcb2f327d647dd44e0fede2571c76eb9e4f44f
+          token: ${{ secrets.DO_ACCESS_TOKEN }}
 
-      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+      - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
 
       - name: Push image to DigitalOcean Container Registry
-        run: docker push registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ github.ref_name }}
+        run: docker push registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
-      - name: Save DigitalOcean kubeconfig with short-lived credentials
+      - name: Save DigitalOcean kubeconfig
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 k8s-prod
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl -n ${{ github.ref_name }} rollout restart deployment/${{ env.image_name }}
+          kubectl -n ${{ env.sanitized_branch }} get deployment/${{ env.image_name }} && \
+          kubectl -n ${{ env.sanitized_branch }} rollout restart deployment/${{ env.image_name }}
