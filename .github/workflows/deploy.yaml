@@ -41,7 +41,6 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_ACCESS_TOKEN }}
-          context: doctl-token
 
       - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
