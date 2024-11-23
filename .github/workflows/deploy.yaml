@@ -37,6 +37,9 @@ jobs:
           docker compose build
           docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
+      - name: Check the token
+        run: echo ${{ secrets.DO_ACCESS_TOKEN }}
+
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
