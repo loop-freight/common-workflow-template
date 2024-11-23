@@ -32,6 +32,7 @@ jobs:
         id: extract-image-name
         run: |
           IMAGE_NAME=$(yq e '.services[0].image | split(":")[0]' docker-compose.yml)
+          echo "Extracted IMAGE_NAME: $IMAGE_NAME"
           echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Sanitize branch name
@@ -40,6 +41,7 @@ jobs:
 
       - name: Build container image
         run: |
+          echo "Building image for: ${{ env.image_name }}"
           docker compose build
           docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
