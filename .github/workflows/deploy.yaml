@@ -17,54 +17,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check secret availability
-        run: echo Token is available ${{ secrets.DO_ACCESS_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # - name: Checkout code
-      #   uses: actions/checkout@v2
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
 
-      # - name: Install Docker Compose
-      #   run: |
-      #     sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-      #     sudo chmod +x /usr/local/bin/docker-compose
+      - name: Extract image name from docker-compose.yml
+        id: extract-image-name
+        run: |
+          export IMAGE_NAME=$(grep 'image:' docker-compose.yml | head -n 1 | awk '{print $2}' | sed 's/:.*//')
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
 
-      # - name: Extract image name from docker-compose.yml
-      #   id: extract-image-name
-      #   run: |
-      #     export IMAGE_NAME=$(grep 'image:' docker-compose.yml | head -n 1 | awk '{print $2}' | sed 's/:.*//')
-      #     echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
+      - name: Sanitize branch name
+        id: sanitize-branch
+        run: echo "sanitized_branch=$(echo ${{ github.ref_name }} | tr '/' '-')" >> $GITHUB_ENV
 
-      # - name: Sanitize branch name
-      #   id: sanitize-branch
-      #   run: echo "sanitized_branch=$(echo ${{ github.ref_name }} | tr '/' '-')" >> $GITHUB_ENV
+      - name: Build container image
+        run: |
+          echo "Building image for: ${{ env.image_name }}"
+          docker compose build
+          docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
-      # # - name: Build container image
-      # #   run: |
-      # #     echo "Building image for: ${{ env.image_name }}"
-      # #     docker compose build
-      # #     docker tag ${{ env.image_name }}:latest registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
+      - name: DO_ACCESS_TOKEN
+        run: echo -- ${{ secrets.DO_ACCESS_TOKEN }}
 
-      # - name: DO_ACCESS_TOKEN
-      #   run: echo -- ${{ secrets.DO_ACCESS_TOKEN }}
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_ACCESS_TOKEN }}
 
-      # - name: Install doctl
-      #   uses: digitalocean/action-doctl@v2
-      #   with:
-      #     token: ${{ secrets.DO_ACCESS_TOKEN }}
+      - name: Log in to DigitalOcean Container Registry
+        run: doctl registry login --expiry-seconds 600
 
-      # # - name: Log in to DigitalOcean with specified context
-      # #   run: doctl auth init --context doctl-token
+      - name: Push image to DigitalOcean Container Registry
+        run: docker push registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
 
-      # - name: Log in to DigitalOcean Container Registry
-      #   run: doctl registry login --expiry-seconds 600
+      - name: Save DigitalOcean kubeconfig
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 k8s-prod
 
-      # - name: Push image to DigitalOcean Container Registry
-      #   run: docker push registry.digitalocean.com/loop-prod-registry/${{ env.image_name }}:${{ env.sanitized_branch }}
-
-      # - name: Save DigitalOcean kubeconfig
-      #   run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 k8s-prod
-
-      # - name: Deploy to Kubernetes
-      #   run: |
-      #     kubectl -n ${{ env.sanitized_branch }} get deployment/${{ env.image_name }} && \
-      #     kubectl -n ${{ env.sanitized_branch }} rollout restart deployment/${{ env.image_name }}
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl -n ${{ env.sanitized_branch }} get deployment/${{ env.image_name }} && \
+          kubectl -n ${{ env.sanitized_branch }} rollout restart deployment/${{ env.image_name }}
